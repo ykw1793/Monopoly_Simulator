@@ -1,0 +1,67 @@
+digraph run_scheme {
+    compound = true;
+    fontname = "Handlee";
+    node [fontname = "Handlee"];
+    edge [fontname = "Handlee"];
+
+    // NODES
+    
+    start [label = <<FONT FACE="Monaco" POINT-SIZE="14.0">self.run()</FONT>>; shape = oval; fillcolor = "lawngreen"; style = filled;];
+    exit_loop_cond [label = <Exit loop?<BR/><BR/><FONT FACE="Monaco" POINT-SIZE="11.0">self.exit_condition()</FONT>>; shape = diamond;];
+    save_data [label = <Save data<BR/><BR/><FONT FACE="Monaco" POINT-SIZE="11.0">self.save()</FONT>>; shape = rect;]
+    return [label = "Return"; shape = oval; fillcolor = "red"; style = filled;]
+    get_curr_plyr [label = <Get current player<BR/><BR/><FONT FACE="Monaco" POINT-SIZE="11.0">self.get_player_idx()</FONT>>; shape = rect;]
+
+    subgraph foreach_active_player {
+        cluster = true;
+        bgcolor = "cornsilk";
+        label = <<B>Run preturn moves for all players</B><BR/><BR/>Foreach active player &nbsp;<FONT FACE="Monaco" POINT-SIZE="11.0">:= player</FONT>>;
+        pre_exec [label = <<FONT FACE="Monaco" POINT-SIZE="11.0">self.execute_non_turn_moves(player)</FONT>>; shape = rect; fillcolor = "aquamarine"; style = filled;];
+
+        pre_exec:se -> pre_exec:ne;
+    }
+
+    in_jail_cond [label = <Is player in jail?<BR/><BR/><FONT FACE="Monaco" POINT-SIZE="11.0">self.player_in_jail(curr player)</FONT>>; shape = diamond;];
+    get_out_of_jail_cond [label = <Did player get out of jail?<BR/><BR/><FONT FACE="Monaco" POINT-SIZE="11.0">self.get_out_of_jail(curr player)</FONT>>; shape = diamond;];
+    roll_dice_cond [label = <Can player roll the dice?>; shape = diamond;];
+    init_next_turn [label = <Initialize next turn<BR/><BR/><FONT FACE="Monaco" POINT-SIZE="11.0">self.add_data_row()</FONT>>; shape = rect;]
+    roll_dice_3times [label = <Roll dice 3 times<BR/><BR/><FONT FACE="Monaco" POINT-SIZE="11.0">self.roll_dice(3)</FONT>>; shape = rect;];
+    all_3rolls_doubles [label = <Are all 3 dice rolls doubles?>; shape = diamond;];
+    go_to_jail [label = <Go to jail<BR/><BR/><FONT FACE="Monaco" POINT-SIZE="11.0">self.go_to_jail(curr player)</FONT>>; shape = rect;];
+
+    subgraph foreach_roll {
+        cluster = true;
+        bgcolor = "cornsilk";
+        label = <Foreach dice roll>;
+        record_dice_values1 [label = <Record dice values<BR/><BR/><FONT FACE="Monaco" POINT-SIZE="11.0">self.set_dice_value(dice values)</FONT>>; shape = rect; fillcolor = "aquamarine"; style = filled;];
+        move_n_evaluate [label = <Move player and evaluate position<BR/><BR/><FONT FACE="Monaco" POINT-SIZE="11.0">self.move_and_evaluate(curr player, num steps)</FONT>>; shape = rect;];
+        double_cond [label = <Is dice roll a double?>; shape = diamond;];
+        init_next_turn_sp [label = <Initialize next turn<BR/><BR/><FONT FACE="Monaco" POINT-SIZE="11.0">self.add_data_row(same player)</FONT>>; shape = rect;]
+
+        record_dice_values1 -> move_n_evaluate;
+        move_n_evaluate -> double_cond;
+        double_cond -> init_next_turn_sp [label = "  Yes"];
+        init_next_turn_sp -> record_dice_values1;
+
+    }
+
+    // EDGES
+
+    start -> exit_loop_cond;
+    exit_loop_cond -> get_curr_plyr [label = "  No";];
+    get_curr_plyr -> pre_exec:sw [lhead = foreach_active_player;];
+    exit_loop_cond -> save_data [label = "  Yes";];
+    save_data -> return;
+    pre_exec -> in_jail_cond
+    in_jail_cond -> get_out_of_jail_cond [label = "  Yes";];
+    in_jail_cond -> roll_dice_cond [label = "  No";];
+    roll_dice_cond -> exit_loop_cond [label = "  No";];
+    get_out_of_jail_cond -> init_next_turn [label = "  No";];
+    init_next_turn -> exit_loop_cond;
+    roll_dice_cond -> roll_dice_3times [label = "  Yes";];
+    roll_dice_3times -> all_3rolls_doubles;
+    all_3rolls_doubles -> go_to_jail [label = "  Yes";];
+    go_to_jail -> init_next_turn;
+    all_3rolls_doubles -> record_dice_values1 [label = "No"; lhead = foreach_roll;];
+    double_cond -> init_next_turn [label = "  No";];
+}
